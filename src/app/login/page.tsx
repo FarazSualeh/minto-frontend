@@ -4,7 +4,7 @@ import { ArrowRight, LockKeyhole, Mail, Phone } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiRequest, setAccessToken } from "@/lib/api";
+import { apiRequest } from "@/lib/api";
 import { NetworkStatus } from "@/components/network-status";
 
 export default function LoginPage() {
@@ -32,11 +32,13 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify(body),
       });
-      const token = response.access_token ?? response.token;
-      if (!token) throw new Error("The server did not return an access token.");
-      setAccessToken(token);
       const role = response.user?.role?.toLowerCase();
-      router.push(role === "admin" ? "/admin" : role?.includes("partner") ? "/partner" : "/home");
+      const next = new URLSearchParams(window.location.search).get("next");
+      const allowedNext =
+        next?.startsWith("/") &&
+        !next.startsWith("//") &&
+        (role === "admin" ? next.startsWith("/admin") : role?.includes("partner") ? next.startsWith("/partner") : !next.startsWith("/admin") && !next.startsWith("/partner"));
+      router.push(allowedNext && next ? next : role === "admin" ? "/admin" : role?.includes("partner") ? "/partner" : "/home");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Sign-in failed.");
     } finally {

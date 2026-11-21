@@ -18,8 +18,6 @@ function getApiBaseUrl() {
   return url.toString().replace(/\/$/, "");
 }
 
-let accessToken: string | null = null;
-
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -30,27 +28,20 @@ export class ApiError extends Error {
   }
 }
 
-export function getAccessToken() {
-  return accessToken;
-}
-
-export function setAccessToken(token: string | null) {
-  accessToken = token;
-}
-
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const token = getAccessToken();
+  const authProxyRequest =
+    typeof window !== "undefined" && path.startsWith("/api/auth");
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+  const url = authProxyRequest ? path : `${getApiBaseUrl()}${path}`;
+  const response = await fetch(url, {
     ...options,
     headers,
   });

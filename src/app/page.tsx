@@ -45,8 +45,8 @@ export default function LandingPage() {
             Chiplun&apos;s 15-minute grocery app
           </div>
           <h1 className="max-w-xl text-[44px] font-black leading-[1.03] tracking-tight sm:text-6xl lg:text-[72px]">
-            Groceries at your door.
-            <span className="text-[#1d6f3b]"> Really fast.</span>
+            Ghar baithe groceries,
+            <span className="text-[#1d6f3b]"> Minto mein!</span>
           </h1>
           <p className="mt-6 max-w-lg text-base leading-7 text-[#69756b] sm:text-lg">
             Fresh food and everyday essentials sourced from stores near you. Order in seconds, receive in minutes.
