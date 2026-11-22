@@ -50,7 +50,7 @@ export function normalizeCategory(category: ApiCatalogCategory): Category {
     image:
       category.image_url ??
       category.image ??
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=500&q=85",
+      "/product-placeholder.svg",
   };
 }
 
@@ -69,7 +69,7 @@ export function normalizeProduct(product: ApiCatalogProduct): Product {
     image:
       product.image_url ??
       product.image ??
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=85",
+      "/product-placeholder.svg",
     tag:
       old != null && Number(old) > price
         ? `${Math.round((1 - price / Number(old)) * 100)}% OFF`

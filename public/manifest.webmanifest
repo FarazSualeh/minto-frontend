@@ -1,0 +1,10 @@
+{
+  "name": "Minto Quick Commerce",
+  "short_name": "Minto",
+  "description": "Fresh groceries delivered quickly across Chiplun.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f5",
+  "theme_color": "#1d6f3b",
+  "icons": []
+}

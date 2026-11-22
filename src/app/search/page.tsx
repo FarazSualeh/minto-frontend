@@ -26,6 +26,7 @@ function SearchResults() {
 
   useEffect(() => {
     let active = true;
+    const timeout = window.setTimeout(() => {
     async function load() {
       setLoading(true);
       setError("");
@@ -49,8 +50,10 @@ function SearchResults() {
       }
     }
     void load();
+    }, 350);
     return () => {
       active = false;
+      window.clearTimeout(timeout);
     };
   }, [query, category, retry]);
 

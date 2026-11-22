@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#edf5e9"/>
+  <circle cx="300" cy="280" r="150" fill="#dfead8"/>
+  <path d="M300 155c-88 0-160 72-160 160h320c0-88-72-160-160-160z" fill="#a8c89b"/>
+  <rect x="170" y="315" width="260" height="35" rx="17" fill="#1d6f3b"/>
+  <text x="300" y="475" text-anchor="middle" fill="#18351f" font-family="Arial" font-size="36" font-weight="700">Minto</text>
+</svg>

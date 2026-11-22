@@ -1,12 +1,80 @@
-import { Bell, Box, ChevronRight, Clock3, PackageCheck, ShoppingBag, Store, UserRound } from "lucide-react";
+"use client";
 
-const orders = [
-  { id: "#MT2481", customer: "Sahil R.", items: 4, total: "₹286", status: "New", time: "2 min", accent: "bg-[#fff1dc] text-[#a86c1d]" },
-  { id: "#MT2480", customer: "Priya P.", items: 7, total: "₹492", status: "Preparing", time: "8 min", accent: "bg-[#eaf3ff] text-[#446fa1]" },
-  { id: "#MT2479", customer: "Nikhil S.", items: 3, total: "₹174", status: "Ready", time: "12 min", accent: "bg-[#edf7e8] text-[#3e7950]" },
-];
+import { Bell, Box, ChevronRight, Clock3, PackageCheck, ShoppingBag, Store, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { apiRequest } from "@/lib/api";
+import type { Order } from "@/lib/types";
 
 export default function PartnerPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const payload = await apiRequest<Order[] | { items: Order[] } | { data: Order[] }>("/api/shop/orders");
+      setOrders(Array.isArray(payload) ? payload : "items" in payload ? payload.items : payload.data);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not load shop orders.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+    apiRequest<Order[] | { items: Order[] } | { data: Order[] }>("/api/shop/orders")
+      .then((payload) => {
+        if (!active) return;
+        setOrders(Array.isArray(payload) ? payload : "items" in payload ? payload.items : payload.data);
+      })
+      .catch((caught) => {
+        if (active) setError(caught instanceof Error ? caught.message : "Could not load shop orders.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function accept(orderId: number) {
+    try {
+      await apiRequest(`/api/shop/orders/${orderId}/accept`, { method: "PATCH", body: "{}" });
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not accept order.");
+    }
+  }
+
+  async function reject(orderId: number) {
+    const reason = window.prompt("Reason for rejecting this order:");
+    if (!reason?.trim()) return;
+    try {
+      await apiRequest(`/api/shop/orders/${orderId}/reject`, {
+        method: "PATCH",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not reject order.");
+    }
+  }
+
+  async function advance(orderId: number, status: "PREPARING" | "READY_FOR_PICKUP") {
+    try {
+      await apiRequest(`/api/shop/orders/${orderId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update order.");
+    }
+  }
   return (
     <main className="min-h-dvh bg-[#f5f7f2] pb-20 md:pb-0">
       <aside className="hidden w-64 border-r border-[#e5e9df] bg-white p-5 md:fixed md:inset-y-0 md:left-0 md:flex md:flex-col">
@@ -50,25 +118,40 @@ export default function PartnerPage() {
               <button className="text-sm font-bold text-[#1d6f3b]">View history</button>
             </div>
             <div className="space-y-3">
-              {orders.map((order) => (
+              {loading ? (
+                Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-white" />)
+              ) : error ? (
+                <div className="rounded-2xl border border-[#eadfd7] bg-white p-5">
+                  <p className="font-bold text-[#9d5a50]">Orders unavailable</p>
+                  <p className="mt-1 text-sm text-[#92998f]">{error}</p>
+                  <button onClick={load} className="mt-4 h-10 rounded-xl bg-[#1d6f3b] px-4 text-xs font-bold text-white">Retry</button>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[#dfe5da] bg-white p-8 text-center text-sm text-[#92998f]">No active shop orders.</div>
+              ) : orders.map((order) => (
                 <article key={order.id} className="rounded-2xl border border-[#e5e9df] bg-white p-4">
                   <div className="flex items-center">
                     <div>
-                      <div className="flex items-center gap-2"><h3 className="font-black text-[#26342a]">{order.id}</h3><span className={`rounded-md px-2 py-1 text-[10px] font-black ${order.accent}`}>{order.status}</span></div>
-                      <p className="mt-1 text-xs text-[#92998f]">{order.customer} · {order.items} items</p>
+                      <div className="flex items-center gap-2"><h3 className="font-black text-[#26342a]">{order.order_number ?? `#MT${order.id}`}</h3><span className="rounded-md bg-[#fff1dc] px-2 py-1 text-[10px] font-black text-[#a86c1d]">{order.status}</span></div>
+                      <p className="mt-1 text-xs text-[#92998f]">{order.items.length} items</p>
                     </div>
-                    <div className="ml-auto text-right"><p className="font-black text-[#26342a]">{order.total}</p><p className="mt-1 text-xs text-[#92998f]">{order.time} ago</p></div>
+                    <div className="ml-auto text-right"><p className="font-black text-[#26342a]">₹{order.total}</p></div>
                     <ChevronRight size={18} className="ml-3 text-[#abb2aa]" />
                   </div>
-                  {order.status === "New" && (
+                  {order.status === "PENDING_SHOP_CONFIRMATION" && (
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                      <button className="h-10 rounded-xl border border-[#e5e9df] text-xs font-bold text-[#9d5a50]">Reject</button>
-                      <button className="h-10 rounded-xl bg-[#1d6f3b] text-xs font-bold text-white">Accept order</button>
+                      <button onClick={() => reject(order.id)} className="h-10 rounded-xl border border-[#e5e9df] text-xs font-bold text-[#9d5a50]">Reject</button>
+                      <button onClick={() => accept(order.id)} className="h-10 rounded-xl bg-[#1d6f3b] text-xs font-bold text-white">Accept order</button>
                     </div>
                   )}
-                  {order.status !== "New" && (
-                    <button className="mt-4 h-10 w-full rounded-xl border border-[#dce8d7] bg-[#f6faf4] text-xs font-bold text-[#1d6f3b]">
-                      {order.status === "Preparing" ? "Mark ready for pickup" : "View packing details"}
+                  {order.status === "ACCEPTED" && (
+                    <button onClick={() => advance(order.id, "PREPARING")} className="mt-4 h-10 w-full rounded-xl border border-[#dce8d7] bg-[#f6faf4] text-xs font-bold text-[#1d6f3b]">
+                      Start preparing
+                    </button>
+                  )}
+                  {order.status === "PREPARING" && (
+                    <button onClick={() => advance(order.id, "READY_FOR_PICKUP")} className="mt-4 h-10 w-full rounded-xl border border-[#dce8d7] bg-[#f6faf4] text-xs font-bold text-[#1d6f3b]">
+                      Mark ready for pickup
                     </button>
                   )}
                 </article>

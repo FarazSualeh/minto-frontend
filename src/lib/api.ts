@@ -34,13 +34,21 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const authProxyRequest =
     typeof window !== "undefined" && path.startsWith("/api/auth");
+  const backendProxyRequest =
+    typeof window !== "undefined" &&
+    !authProxyRequest &&
+    (path.startsWith("/api/"));
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const url = authProxyRequest ? path : `${getApiBaseUrl()}${path}`;
+  const url = backendProxyRequest
+    ? `/api/backend/${path.replace(/^\/api\//, "")}`
+    : authProxyRequest
+      ? path
+      : `${getApiBaseUrl()}${path}`;
   const response = await fetch(url, {
     ...options,
     headers,

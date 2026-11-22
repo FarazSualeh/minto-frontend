@@ -1,12 +1,56 @@
-import { Bell, Box, ChevronDown, CircleCheck, LayoutDashboard, Search, ShieldCheck, Store, Users } from "lucide-react";
+"use client";
 
-const users = [
-  { name: "Anil Patil", type: "Shop partner", phone: "+91 98765 10012", status: "Pending", initials: "AP" },
-  { name: "Meera Stores", type: "Shop partner", phone: "+91 98765 10048", status: "Approved", initials: "MS" },
-  { name: "Rohan K.", type: "Delivery partner", phone: "+91 98765 10073", status: "Approved", initials: "RK" },
-];
+import { Bell, Box, ChevronDown, CircleCheck, LayoutDashboard, Search, ShieldCheck, Store, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { apiRequest } from "@/lib/api";
+import type { User } from "@/lib/types";
 
 export default function AdminPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function load() {
+    setLoading(true);
+    setError("");
+    try {
+      const payload = await apiRequest<User[] | { items: User[] }>("/api/admin/users");
+      setUsers(Array.isArray(payload) ? payload : payload.items ?? []);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not load users.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+    apiRequest<User[] | { items: User[] }>("/api/admin/users")
+      .then((payload) => {
+        if (active) setUsers(Array.isArray(payload) ? payload : payload.items ?? []);
+      })
+      .catch((caught) => {
+        if (active) setError(caught instanceof Error ? caught.message : "Could not load users.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function updateStatus(userId: number, status: "approved" | "inactive") {
+    try {
+      await apiRequest(`/api/admin/users/${userId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update user.");
+    }
+  }
   return (
     <main className="min-h-dvh bg-[#f5f7f2] pb-20 md:pb-0">
       <aside className="hidden w-60 border-r border-[#e5e9df] bg-white p-5 md:fixed md:inset-y-0 md:left-0 md:flex md:flex-col">
@@ -55,16 +99,26 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="divide-y divide-[#edf0e9]">
-              {users.map((user) => (
+              {loading ? (
+                Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-20 animate-pulse bg-white" />)
+              ) : error ? (
+                <div className="p-4">
+                  <p className="text-sm font-bold text-[#9d5a50]">Users unavailable</p>
+                  <p className="mt-1 text-xs text-[#92998f]">{error}</p>
+                  <button onClick={load} className="mt-3 h-9 rounded-lg bg-[#1d6f3b] px-3 text-xs font-bold text-white">Retry</button>
+                </div>
+              ) : users.length === 0 ? (
+                <p className="p-8 text-center text-sm text-[#92998f]">No users found.</p>
+              ) : users.map((user) => (
                 <article key={user.name} className="flex items-center gap-3 p-4">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#edf5e9] text-xs font-black text-[#1d6f3b]">{user.initials}</span>
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#edf5e9] text-xs font-black text-[#1d6f3b]">{user.name.slice(0, 2).toUpperCase()}</span>
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-black text-[#26342a]">{user.name}</h3>
-                    <p className="mt-1 truncate text-xs text-[#92998f]">{user.type} · {user.phone}</p>
+                    <p className="mt-1 truncate text-xs text-[#92998f]">{user.role} · {user.phone ?? user.email ?? "No contact"}</p>
                   </div>
                   <div className="ml-auto">
-                    {user.status === "Pending" ? (
-                      <button className="h-9 rounded-lg bg-[#1d6f3b] px-3 text-xs font-bold text-white">Approve</button>
+                    {!user.is_approved ? (
+                      <button onClick={() => updateStatus(user.id, "approved")} className="h-9 rounded-lg bg-[#1d6f3b] px-3 text-xs font-bold text-white">Approve</button>
                     ) : (
                       <span className="flex items-center gap-1 text-xs font-bold text-[#1d6f3b]"><ShieldCheck size={14} /> Approved</span>
                     )}

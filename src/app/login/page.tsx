@@ -38,7 +38,17 @@ export default function LoginPage() {
         next?.startsWith("/") &&
         !next.startsWith("//") &&
         (role === "admin" ? next.startsWith("/admin") : role?.includes("partner") ? next.startsWith("/partner") : !next.startsWith("/admin") && !next.startsWith("/partner"));
-      router.push(allowedNext && next ? next : role === "admin" ? "/admin" : role?.includes("partner") ? "/partner" : "/home");
+      router.push(
+        allowedNext && next
+          ? next
+          : role === "admin"
+            ? "/admin"
+            : role?.includes("shop_partner")
+              ? "/partner"
+              : role?.includes("delivery")
+                ? "/delivery"
+                : "/home",
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Sign-in failed.");
     } finally {
